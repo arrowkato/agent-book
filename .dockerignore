@@ -1,0 +1,6 @@
+# ignore directories
+.venv/
+.ruff_cache/
+
+# ignore files
+.env
