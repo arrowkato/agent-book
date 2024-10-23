@@ -1,0 +1,23 @@
+default_stages: [commit]
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.3.5
+    hooks:
+      - id: ruff
+        name: Ruff check
+        description: "Run 'ruff check' for extremely fast Python linting"
+        args: [--fix]
+
+      - id: ruff-format
+        name: Ruff format
+        description: "Run 'ruff format' for extremely fast Python formatting"
+
+  - repo: local
+    hooks:
+      - id: pyright
+        name: Pyright
+        description: "Run Pyright for static type checking"
+        entry: pyright
+        language: python
+        types: [python, jupyter]
+        additional_dependencies: ["pyright>=1.1"]
