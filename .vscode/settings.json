@@ -4,6 +4,9 @@
     "python.analysis.extraPaths": [
         ".venv/lib/python3.10/site-packages"
     ],
+    "python.analysis.exclude": [
+        ".git"
+    ],
     "[python]": {
         "editor.formatOnSave": true,
         "editor.codeActionsOnSave": {
