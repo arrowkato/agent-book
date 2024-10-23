@@ -119,3 +119,10 @@ exclude = ["**/__pycache__", ".mypy_cache", ".ruff_cache"]
 ignore = []
 pythonVersion = "3.10"
 pythonPlatform = "Linux"
+
+# ["off", "basic", "standard", "strict"]
+typeCheckingMode = "basic"
+
+# 関数の返却値が親クラスで、変数側の型ヒントが子クラスの場合は、errorではなく、informationにします。
+# どちらかというとpyrightがおかしい挙動ですが、妥協
+reportAssignmentType = "information"
