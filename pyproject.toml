@@ -12,7 +12,7 @@ dependencies = [
     "langchain-community==0.3.0",
     "GitPython==3.1.43",
     "langchain-text-splitters==0.3.0",
-    "langchain-chroma",
+    "langchain-chroma==0.1.4",
     # 以下、本文中には特に示されていないライブラリ。
     # 各章のreqiurements.txt とあわせるのがベターだが、ここではまとめて記述。
     "ipykernel>=6.29.5",
