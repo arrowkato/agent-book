@@ -13,6 +13,7 @@ dependencies = [
     "GitPython==3.1.43",
     "langchain-text-splitters==0.3.0",
     "langchain-chroma==0.1.4",
+    "tavily-python==0.5.0",
     # 以下、本文中には特に示されていないライブラリ。
     # 各章のreqiurements.txt とあわせるのがベターだが、ここではまとめて記述。
     "ipykernel>=6.29.5",
@@ -126,3 +127,4 @@ typeCheckingMode = "basic"
 # 関数の返却値が親クラスで、変数側の型ヒントが子クラスの場合は、errorではなく、informationにします。
 # どちらかというとpyrightがおかしい挙動ですが、妥協
 reportAssignmentType = "information"
+reportTypedDictNotRequiredAccess = "warning"
