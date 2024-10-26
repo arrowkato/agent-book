@@ -5,7 +5,7 @@ WORKDIR /opt
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-    ca-certificates gnupg curl
+    ca-certificates gnupg curl sqlite3
 
 
 SHELL [ "/bin/bash", "-o", "pipefail", "-c" ]
