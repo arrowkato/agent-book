@@ -19,6 +19,11 @@ RUN sh uv-installer.sh
 
 FROM mcr.microsoft.com/vscode/devcontainers/base:bookworm
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    graphviz libgraphviz-dev pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV CARGO_HOME="/opt/.cargo/bin"
 ENV PATH="$CARGO_HOME/:$PATH"
 
