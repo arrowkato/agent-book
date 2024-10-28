@@ -5,42 +5,45 @@ description = "LangChain と LangGraph による RAG・AI エージェント［�
 readme = "README.md"
 requires-python = "==3.10.12"
 # chap07以外用
+dependencies = [
+    # 書籍の本文中のchap07以外で明示されているバージョンは固定。
+    "langchain==0.3.0",
+    "langchain-openai==0.2.0",
+    "openai==1.40.6",
+    "langchain-community==0.3.0",
+    "langgraph==0.2.22",
+    "langgraph-checkpoint==1.0.11",
+    "GitPython==3.1.43",
+    "langchain-text-splitters==0.3.0",
+    "langchain-chroma==0.1.4",
+    "tavily-python==0.5.0",
+    "langchain-cohere==0.3.0",
+    "rank-bm25==0.2.2",
+    # 以下、本文中には特に示されていないライブラリ。
+    # 各章のreqiurements.txt とあわせるのがベターだが、ここではまとめて記述。
+    "ipykernel>=6.29.5",
+    "python-dotenv>=1.0.1",
+    "tiktoken>=0.8.0",
+    "ipywidgets>=7.7.1",
+    "pygraphviz>=1.1.4",
+]
+
+# chap07用 ragasは、langchain v0.3系の対応をしていないので、langchainもv0.2系を指定
 # dependencies = [
-#     # 書籍の本文中のchap07以外で明示されているバージョンは固定。
-#     "langchain==0.3.0",
-#     "langchain-openai==0.2.0",
-#     "openai==1.40.6",
-#     "langchain-community==0.3.0",
+#     "langchain-core==0.2.30",
+#     "langchain-openai==0.1.21",
+#     "langchain-community==0.2.12",
 #     "GitPython==3.1.43",
-#     "langchain-text-splitters==0.3.0",
-#     "langchain-chroma==0.1.4",
-#     "tavily-python==0.5.0",
-#     "langchain-cohere==0.3.0",
-#     "rank-bm25==0.2.2",
-#     # 以下、本文中には特に示されていないライブラリ。
-#     # 各章のreqiurements.txt とあわせるのがベターだが、ここではまとめて記述。
+#     "langchain-chroma==0.1.2",
+#     "chromadb==0.5.3",
+#     "ragas==0.1.14",
+#     "nest-asyncio==1.6.0",
+#     # 本文中にはないけれども必要なパッケージ
 #     "ipykernel>=6.29.5",
 #     "python-dotenv>=1.0.1",
 #     "tiktoken>=0.8.0",
 #     "ipywidgets>=7.7.1",
 # ]
-
-# chap07用 ragasは、langchain v0.3系の対応をしていないので、langchainもv0.2系を指定
-dependencies = [
-    "langchain-core==0.2.30",
-    "langchain-openai==0.1.21",
-    "langchain-community==0.2.12",
-    "GitPython==3.1.43",
-    "langchain-chroma==0.1.2",
-    "chromadb==0.5.3",
-    "ragas==0.1.14",
-    "nest-asyncio==1.6.0",
-    # 本文中にはないけれども必要なパッケージ
-    "ipykernel>=6.29.5",
-    "python-dotenv>=1.0.1",
-    "tiktoken>=0.8.0",
-    "ipywidgets>=7.7.1",
-]
 
 
 [tool.uv]
