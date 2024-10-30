@@ -6,10 +6,11 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, Field
 
 # .envファイルから環境変数を読み込む
-load_dotenv()
+load_dotenv()  # OPENAI_API_KEY は必須。LangSmith系環境変数はお好みで
 
 
 # ペルソナを表すデータモデル
@@ -20,9 +21,7 @@ class Persona(BaseModel):
 
 # ペルソナのリストを表すデータモデル
 class Personas(BaseModel):
-    personas: list[Persona] = Field(
-        default_factory=list, description="ペルソナのリスト"
-    )
+    personas: list[Persona] = Field(default_factory=list, description="ペルソナのリスト")
 
 
 # インタビュー内容を表すデータモデル
@@ -35,7 +34,8 @@ class Interview(BaseModel):
 # インタビュー結果のリストを表すデータモデル
 class InterviewResult(BaseModel):
     interviews: list[Interview] = Field(
-        default_factory=list, description="インタビュー結果のリスト"
+        default_factory=list,
+        description="インタビュー結果のリスト",
     )
 
 
@@ -49,23 +49,24 @@ class EvaluationResult(BaseModel):
 class InterviewState(BaseModel):
     user_request: str = Field(..., description="ユーザーからのリクエスト")
     personas: Annotated[list[Persona], operator.add] = Field(
-        default_factory=list, description="生成されたペルソナのリスト"
+        default_factory=list,
+        description="生成されたペルソナのリスト",
     )
     interviews: Annotated[list[Interview], operator.add] = Field(
-        default_factory=list, description="実施されたインタビューのリスト"
+        default_factory=list,
+        description="実施されたインタビューのリスト",
     )
     requirements_doc: str = Field(default="", description="生成された要件定義")
-    iteration: int = Field(
-        default=0, description="ペルソナ生成とインタビューの反復回数"
-    )
+    iteration: int = Field(default=0, description="ペルソナ生成とインタビューの反復回数")
     is_information_sufficient: bool = Field(
-        default=False, description="情報が十分かどうか"
+        default=False,
+        description="情報が十分かどうか",
     )
 
 
 # ペルソナを生成するクラス
 class PersonaGenerator:
-    def __init__(self, llm: ChatOpenAI, k: int = 5):
+    def __init__(self, llm: ChatOpenAI, k: int = 5) -> None:
         self.llm = llm.with_structured_output(Personas)
         self.k = k
 
@@ -88,30 +89,38 @@ class PersonaGenerator:
         # ペルソナ生成のためのチェーンを作成
         chain = prompt | self.llm
         # ペルソナを生成
-        return chain.invoke({"user_request": user_request})
+        return chain.invoke({"user_request": user_request})  # type: ignore
 
 
 # インタビューを実施するクラス
 class InterviewConductor:
-    def __init__(self, llm: ChatOpenAI):
+    def __init__(self, llm: ChatOpenAI) -> None:
         self.llm = llm
 
     def run(self, user_request: str, personas: list[Persona]) -> InterviewResult:
         # 質問を生成
         questions = self._generate_questions(
-            user_request=user_request, personas=personas
+            user_request=user_request,
+            personas=personas,
         )
         # 回答を生成
-        answers = self._generate_answers(personas=personas, questions=questions)
+        answers = self._generate_answers(
+            personas=personas,
+            questions=questions,
+        )
         # 質問と回答の組み合わせからインタビューリストを作成
         interviews = self._create_interviews(
-            personas=personas, questions=questions, answers=answers
+            personas=personas,
+            questions=questions,
+            answers=answers,
         )
         # インタビュー結果を返す
         return InterviewResult(interviews=interviews)
 
     def _generate_questions(
-        self, user_request: str, personas: list[Persona]
+        self,
+        user_request: str,
+        personas: list[Persona],
     ) -> list[str]:
         # 質問生成のためのプロンプトを定義
         question_prompt = ChatPromptTemplate.from_messages(
@@ -144,9 +153,7 @@ class InterviewConductor:
         # 質問をバッチ処理で生成
         return question_chain.batch(question_queries)
 
-    def _generate_answers(
-        self, personas: list[Persona], questions: list[str]
-    ) -> list[str]:
+    def _generate_answers(self, personas: list[Persona], questions: list[str]) -> list[str]:
         # 回答生成のためのプロンプトを定義
         answer_prompt = ChatPromptTemplate.from_messages(
             [
@@ -172,19 +179,21 @@ class InterviewConductor:
         # 回答をバッチ処理で生成
         return answer_chain.batch(answer_queries)
 
-    def _create_interviews(
-        self, personas: list[Persona], questions: list[str], answers: list[str]
-    ) -> list[Interview]:
+    def _create_interviews(self, personas: list[Persona], questions: list[str], answers: list[str]) -> list[Interview]:
         # ペルソナ毎に質問と回答の組み合わせからインタビューオブジェクトを作成
         return [
             Interview(persona=persona, question=question, answer=answer)
-            for persona, question, answer in zip(personas, questions, answers)
+            for persona, question, answer in zip(
+                personas,
+                questions,
+                answers,
+            )
         ]
 
 
 # 情報の十分性を評価するクラス
 class InformationEvaluator:
-    def __init__(self, llm: ChatOpenAI):
+    def __init__(self, llm: ChatOpenAI) -> None:
         self.llm = llm.with_structured_output(EvaluationResult)
 
     # ユーザーリクエストとインタビュー結果を基に情報の十分性を評価
@@ -211,17 +220,20 @@ class InformationEvaluator:
             {
                 "user_request": user_request,
                 "interview_results": "\n".join(
-                    f"ペルソナ: {i.persona.name} - {i.persona.background}\n"
-                    f"質問: {i.question}\n回答: {i.answer}\n"
+                    f"""\
+ペルソナ: {i.persona.name} - {i.persona.background}
+質問: {i.question}
+回答: {i.answer}
+"""
                     for i in interviews
                 ),
             }
-        )
+        )  # type: ignore
 
 
 # 要件定義書を生成するクラス
 class RequirementsDocumentGenerator:
-    def __init__(self, llm: ChatOpenAI):
+    def __init__(self, llm: ChatOpenAI) -> None:
         self.llm = llm
 
     def run(self, user_request: str, interviews: list[Interview]) -> str:
@@ -256,8 +268,11 @@ class RequirementsDocumentGenerator:
             {
                 "user_request": user_request,
                 "interview_results": "\n".join(
-                    f"ペルソナ: {i.persona.name} - {i.persona.background}\n"
-                    f"質問: {i.question}\n回答: {i.answer}\n"
+                    f"""\
+ペルソナ: {i.persona.name} - {i.persona.background}
+質問: {i.question}
+回答: {i.answer}
+"""
                     for i in interviews
                 ),
             }
@@ -266,9 +281,12 @@ class RequirementsDocumentGenerator:
 
 # 要件定義書生成AIエージェントのクラス
 class DocumentationAgent:
-    def __init__(self, llm: ChatOpenAI, k: Optional[int] = None):
+    def __init__(self, llm: ChatOpenAI, k: Optional[int] = None) -> None:
         # 各種ジェネレータの初期化
-        self.persona_generator = PersonaGenerator(llm=llm, k=k)
+        if k is None:
+            self.persona_generator = PersonaGenerator(llm=llm)
+        else:
+            self.persona_generator = PersonaGenerator(llm=llm, k=k)
         self.interview_conductor = InterviewConductor(llm=llm)
         self.information_evaluator = InformationEvaluator(llm=llm)
         self.requirements_generator = RequirementsDocumentGenerator(llm=llm)
@@ -276,7 +294,7 @@ class DocumentationAgent:
         # グラフの作成
         self.graph = self._create_graph()
 
-    def _create_graph(self) -> StateGraph:
+    def _create_graph(self) -> CompiledStateGraph:
         # グラフの初期化
         workflow = StateGraph(InterviewState)
 
@@ -315,14 +333,16 @@ class DocumentationAgent:
     def _conduct_interviews(self, state: InterviewState) -> dict[str, Any]:
         # インタビューの実施
         new_interviews: InterviewResult = self.interview_conductor.run(
-            state.user_request, state.personas[-5:]
+            state.user_request,
+            state.personas[-5:],
         )
         return {"interviews": new_interviews.interviews}
 
     def _evaluate_information(self, state: InterviewState) -> dict[str, Any]:
         # 情報の評価
         evaluation_result: EvaluationResult = self.information_evaluator.run(
-            state.user_request, state.interviews
+            state.user_request,
+            state.interviews,
         )
         return {
             "is_information_sufficient": evaluation_result.is_sufficient,
@@ -332,7 +352,8 @@ class DocumentationAgent:
     def _generate_requirements(self, state: InterviewState) -> dict[str, Any]:
         # 要件定義書の生成
         requirements_doc: str = self.requirements_generator.run(
-            state.user_request, state.interviews
+            state.user_request,
+            state.interviews,
         )
         return {"requirements_doc": requirements_doc}
 
@@ -349,13 +370,14 @@ class DocumentationAgent:
 # poetry run python -m documentation_agent.main --task "ユーザーリクエストをここに入力してください"
 # 実行例）
 # poetry run python -m documentation_agent.main --task "スマートフォン向けの健康管理アプリを開発したい"
-def main():
+#
+# devcontaier+uvの場合
+# uv run python /workspaces/agent-book/chapter10/documentation_agent/main.py --task "スマートフォン向けの健康管理アプリを開発したい"
+def main() -> None:
     import argparse
 
     # コマンドライン引数のパーサーを作成
-    parser = argparse.ArgumentParser(
-        description="ユーザー要求に基づいて要件定義を生成します"
-    )
+    parser = argparse.ArgumentParser(description="ユーザー要求に基づいて要件定義を生成します")
     # "task"引数を追加
     parser.add_argument(
         "--task",
@@ -373,7 +395,7 @@ def main():
     args = parser.parse_args()
 
     # ChatOpenAIモデルを初期化
-    llm = ChatOpenAI(model="gpt-4o", temperature=0.0)
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.0)  # 良い結果が欲しい場合は、gpt-4o, o1-mini, o1-preview の利用を検討して下さい。
     # 要件定義書生成AIエージェントを初期化
     agent = DocumentationAgent(llm=llm, k=args.k)
     # エージェントを実行して最終的な出力を取得
