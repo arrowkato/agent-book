@@ -2,11 +2,11 @@ import operator
 from typing import Annotated, Any
 
 from langchain_community.tools.tavily_search import TavilySearchResults
-from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
 from pydantic import BaseModel, Field
 from single_path_plan_generation.main import DecomposedTasks, QueryDecomposer
@@ -29,18 +29,14 @@ class TasksWithRoles(BaseModel):
 
 class AgentState(BaseModel):
     query: str = Field(..., description="ユーザーが入力したクエリ")
-    tasks: list[Task] = Field(
-        default_factory=list, description="実行するタスクのリスト"
-    )
+    tasks: list[Task] = Field(default_factory=list, description="実行するタスクのリスト")
     current_task_index: int = Field(default=0, description="現在実行中のタスクの番号")
-    results: Annotated[list[str], operator.add] = Field(
-        default_factory=list, description="実行済みタスクの結果リスト"
-    )
+    results: Annotated[list[str], operator.add] = Field(default_factory=list, description="実行済みタスクの結果リスト")
     final_report: str = Field(default="", description="最終的な出力結果")
 
 
 class Planner:
-    def __init__(self, llm: ChatOpenAI):
+    def __init__(self, llm: ChatOpenAI) -> None:
         self.query_decomposer = QueryDecomposer(llm=llm)
 
     def run(self, query: str) -> list[Task]:
@@ -49,7 +45,7 @@ class Planner:
 
 
 class RoleAssigner:
-    def __init__(self, llm: ChatOpenAI):
+    def __init__(self, llm: ChatOpenAI) -> None:
         self.llm = llm.with_structured_output(TasksWithRoles)
 
     def run(self, tasks: list[Task]) -> list[Task]:
@@ -57,9 +53,7 @@ class RoleAssigner:
             [
                 (
                     "system",
-                    (
-                        "あなたは創造的な役割設計の専門家です。与えられたタスクに対して、ユニークで適切な役割を生成してください。"
-                    ),
+                    ("あなたは創造的な役割設計の専門家です。与えられたタスクに対して、ユニークで適切な役割を生成してください。"),
                 ),
                 (
                     "human",
@@ -76,9 +70,7 @@ class RoleAssigner:
             ],
         )
         chain = prompt | self.llm
-        tasks_with_roles = chain.invoke(
-            {"tasks": "\n".join([task.description for task in tasks])}
-        )
+        tasks_with_roles = chain.invoke({"tasks": "\n".join([task.description for task in tasks])})
         return tasks_with_roles.tasks
 
 
@@ -146,7 +138,8 @@ class Reporter:
             {
                 "query": query,
                 "results": "\n\n".join(
-                    f"Info {i+1}:\n{result}" for i, result in enumerate(results)
+                    f"Info {i+1}:\n{result}"
+                    for i, result in enumerate(results),
                 ),
             }
         )
@@ -161,7 +154,7 @@ class RoleBasedCooperation:
         self.reporter = Reporter(llm=llm)
         self.graph = self._create_graph()
 
-    def _create_graph(self) -> StateGraph:
+    def _create_graph(self) -> CompiledStateGraph:
         workflow = StateGraph(AgentState)
 
         workflow.add_node("planner", self._plan_tasks)
@@ -209,20 +202,19 @@ class RoleBasedCooperation:
         return final_state["final_report"]
 
 
-def main():
+def main() -> None:
     import argparse
 
     from settings import Settings
 
     settings = Settings()
-    parser = argparse.ArgumentParser(
-        description="RoleBasedCooperationを使用してタスクを実行します"
-    )
+    parser = argparse.ArgumentParser(description="RoleBasedCooperationを使用してタスクを実行します")
     parser.add_argument("--task", type=str, required=True, help="実行するタスク")
     args = parser.parse_args()
 
     llm = ChatOpenAI(
-        model=settings.openai_smart_model, temperature=settings.temperature
+        model=settings.openai_smart_model,
+        temperature=settings.temperature,
     )
     agent = RoleBasedCooperation(llm=llm)
     result = agent.run(query=args.task)
