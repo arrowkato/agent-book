@@ -138,8 +138,7 @@ class Reporter:
             {
                 "query": query,
                 "results": "\n\n".join(
-                    f"Info {i+1}:\n{result}"
-                    for i, result in enumerate(results),
+                    (f"Info {i+1}:\n{result}" for i, result in enumerate(results)),
                 ),
             }
         )
