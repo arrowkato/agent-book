@@ -18,7 +18,8 @@ class Settings(BaseSettings):
     LANGCHAIN_PROJECT: str = "agent-book"
 
     # for Application
-    openai_smart_model: str = "gpt-4o"
+    # 2024/10/02から gpt-4o と指定すると gpt-4o-2024-08-06 を指します。2024/10/01以前は、 gpt-4o-2024-05-03を指していました。
+    openai_smart_model: str = "gpt-4o-2024-08-06"
     openai_embedding_model: str = "text-embedding-3-small"
     anthropic_smart_model: str = "claude-3-5-sonnet-20241022"
     temperature: float = 0.0
