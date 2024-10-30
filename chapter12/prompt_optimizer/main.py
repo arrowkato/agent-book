@@ -14,7 +14,7 @@ class OptimizedGoal(BaseModel):
 
 
 class PromptOptimizer:
-    def __init__(self, llm: ChatOpenAI):
+    def __init__(self, llm: ChatOpenAI) -> None:
         self.llm = llm
 
     def run(self, query: str) -> OptimizedGoal:
@@ -35,25 +35,21 @@ class PromptOptimizer:
             "6. REMEMBER: 決して2.以外の行動を取ってはいけません。"
         )
         chain = prompt | self.llm.with_structured_output(OptimizedGoal)
-        return chain.invoke({"query": query})
+        return chain.invoke({"query": query})  # type: ignore
 
 
-def main():
+def main() -> None:
     import argparse
 
     from settings import Settings
 
     settings = Settings()
 
-    parser = argparse.ArgumentParser(
-        description="PromptOptimizerを利用して、生成された目標のリストを最適化します"
-    )
+    parser = argparse.ArgumentParser(description="PromptOptimizerを利用して、生成された目標のリストを最適化します")
     parser.add_argument("--task", type=str, required=True, help="実行するタスク")
     args = parser.parse_args()
 
-    llm = ChatOpenAI(
-        model=settings.openai_smart_model, temperature=settings.temperature
-    )
+    llm = ChatOpenAI(model=settings.openai_smart_model, temperature=settings.temperature)
 
     passive_goal_creator = PassiveGoalCreator(llm=llm)
     goal: Goal = passive_goal_creator.run(query=args.task)

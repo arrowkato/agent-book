@@ -7,6 +7,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
 from passive_goal_creator.main import Goal, PassiveGoalCreator
 from prompt_optimizer.main import OptimizedGoal, PromptOptimizer
@@ -26,19 +27,15 @@ class DecomposedTasks(BaseModel):
 class SinglePathPlanGenerationState(BaseModel):
     query: str = Field(..., description="ユーザーが入力したクエリ")
     optimized_goal: str = Field(default="", description="最適化された目標")
-    optimized_response: str = Field(
-        default="", description="最適化されたレスポンス定義"
-    )
+    optimized_response: str = Field(default="", description="最適化されたレスポンス定義")
     tasks: list[str] = Field(default_factory=list, description="実行するタスクのリスト")
     current_task_index: int = Field(default=0, description="現在実行中のタスクの番号")
-    results: Annotated[list[str], operator.add] = Field(
-        default_factory=list, description="実行済みタスクの結果リスト"
-    )
+    results: Annotated[list[str], operator.add] = Field(default_factory=list, description="実行済みタスクの結果リスト")
     final_output: str = Field(default="", description="最終的な出力結果")
 
 
 class QueryDecomposer:
-    def __init__(self, llm: ChatOpenAI):
+    def __init__(self, llm: ChatOpenAI) -> None:
         self.llm = llm
         self.current_date = datetime.now().strftime("%Y-%m-%d")
 
@@ -56,11 +53,11 @@ class QueryDecomposer:
             "目標: {query}"
         )
         chain = prompt | self.llm.with_structured_output(DecomposedTasks)
-        return chain.invoke({"query": query})
+        return chain.invoke({"query": query})  # type: ignore
 
 
 class TaskExecutor:
-    def __init__(self, llm: ChatOpenAI):
+    def __init__(self, llm: ChatOpenAI) -> None:
         self.llm = llm
         self.tools = [TavilySearchResults(max_results=3)]
 
@@ -88,7 +85,7 @@ class TaskExecutor:
 
 
 class ResultAggregator:
-    def __init__(self, llm: ChatOpenAI):
+    def __init__(self, llm: ChatOpenAI) -> None:
         self.llm = llm
 
     def run(self, query: str, response_definition: str, results: list[str]) -> str:
@@ -98,9 +95,7 @@ class ResultAggregator:
             "与えられた目標に対し、調査結果を用いて、以下の指示に基づいてレスポンスを生成してください。\n"
             "{response_definition}"
         )
-        results_str = "\n\n".join(
-            f"Info {i+1}:\n{result}" for i, result in enumerate(results)
-        )
+        results_str = "\n\n".join(f"Info {i+1}:\n{result}" for i, result in enumerate(results))
         chain = prompt | self.llm | StrOutputParser()
         return chain.invoke(
             {
@@ -112,7 +107,7 @@ class ResultAggregator:
 
 
 class SinglePathPlanGeneration:
-    def __init__(self, llm: ChatOpenAI):
+    def __init__(self, llm: ChatOpenAI) -> None:
         self.passive_goal_creator = PassiveGoalCreator(llm=llm)
         self.prompt_optimizer = PromptOptimizer(llm=llm)
         self.response_optimizer = ResponseOptimizer(llm=llm)
@@ -121,7 +116,7 @@ class SinglePathPlanGeneration:
         self.result_aggregator = ResultAggregator(llm=llm)
         self.graph = self._create_graph()
 
-    def _create_graph(self) -> StateGraph:
+    def _create_graph(self) -> CompiledStateGraph:
         graph = StateGraph(SinglePathPlanGenerationState)
         graph.add_node("goal_setting", self._goal_setting)
         graph.add_node("decompose_query", self._decompose_query)
@@ -150,9 +145,7 @@ class SinglePathPlanGeneration:
         }
 
     def _decompose_query(self, state: SinglePathPlanGenerationState) -> dict[str, Any]:
-        decomposed_tasks: DecomposedTasks = self.query_decomposer.run(
-            query=state.optimized_goal
-        )
+        decomposed_tasks: DecomposedTasks = self.query_decomposer.run(query=state.optimized_goal)
         return {"tasks": decomposed_tasks.values}
 
     def _execute_task(self, state: SinglePathPlanGenerationState) -> dict[str, Any]:
@@ -163,9 +156,7 @@ class SinglePathPlanGeneration:
             "current_task_index": state.current_task_index + 1,
         }
 
-    def _aggregate_results(
-        self, state: SinglePathPlanGenerationState
-    ) -> dict[str, Any]:
+    def _aggregate_results(self, state: SinglePathPlanGenerationState) -> dict[str, Any]:
         final_output = self.result_aggregator.run(
             query=state.optimized_goal,
             response_definition=state.optimized_response,
@@ -179,22 +170,18 @@ class SinglePathPlanGeneration:
         return final_state.get("final_output", "Failed to generate a final response.")
 
 
-def main():
+def main() -> None:
     import argparse
 
     from settings import Settings
 
     settings = Settings()
 
-    parser = argparse.ArgumentParser(
-        description="SinglePathPlanGenerationを使用してタスクを実行します"
-    )
+    parser = argparse.ArgumentParser(description="SinglePathPlanGenerationを使用してタスクを実行します")
     parser.add_argument("--task", type=str, required=True, help="実行するタスク")
     args = parser.parse_args()
 
-    llm = ChatOpenAI(
-        model=settings.openai_smart_model, temperature=settings.temperature
-    )
+    llm = ChatOpenAI(model=settings.openai_smart_model, temperature=settings.temperature)
     agent = SinglePathPlanGeneration(llm=llm)
     result = agent.run(args.task)
     print(result)

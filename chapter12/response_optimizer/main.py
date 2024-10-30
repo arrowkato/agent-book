@@ -6,7 +6,7 @@ from prompt_optimizer.main import OptimizedGoal, PromptOptimizer
 
 
 class ResponseOptimizer:
-    def __init__(self, llm: ChatOpenAI):
+    def __init__(self, llm: ChatOpenAI) -> None:
         self.llm = llm
 
     def run(self, query: str) -> str:
@@ -49,7 +49,7 @@ class ResponseOptimizer:
         return chain.invoke({"query": query})
 
 
-def main():
+def main() -> None:
     import argparse
 
     from settings import Settings
@@ -62,9 +62,7 @@ def main():
     parser.add_argument("--task", type=str, required=True, help="実行するタスク")
     args = parser.parse_args()
 
-    llm = ChatOpenAI(
-        model=settings.openai_smart_model, temperature=settings.temperature
-    )
+    llm = ChatOpenAI(model=settings.openai_smart_model, temperature=settings.temperature)
 
     passive_goal_creator = PassiveGoalCreator(llm=llm)
     goal: Goal = passive_goal_creator.run(query=args.task)
