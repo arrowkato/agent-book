@@ -15,7 +15,7 @@ class PassiveGoalCreator:
     def __init__(
         self,
         llm: ChatOpenAI,
-    ):
+    ) -> None:
         self.llm = llm
 
     def run(self, query: str) -> Goal:
@@ -30,24 +30,23 @@ class PassiveGoalCreator:
             "ユーザーの入力: {query}"
         )
         chain = prompt | self.llm.with_structured_output(Goal)
-        return chain.invoke({"query": query})
+        return chain.invoke({"query": query})  # type: ignore
 
 
-def main():
+def main() -> None:
     import argparse
 
     from settings import Settings
 
     settings = Settings()
 
-    parser = argparse.ArgumentParser(
-        description="PassiveGoalCreatorを利用して目標を生成します"
-    )
+    parser = argparse.ArgumentParser(description="PassiveGoalCreatorを利用して目標を生成します")
     parser.add_argument("--task", type=str, required=True, help="実行するタスク")
     args = parser.parse_args()
 
     llm = ChatOpenAI(
-        model=settings.openai_smart_model, temperature=settings.temperature
+        model=settings.openai_smart_model,
+        temperature=settings.temperature,
     )
     goal_creator = PassiveGoalCreator(llm=llm)
     result: Goal = goal_creator.run(query=args.task)
