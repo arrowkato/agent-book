@@ -1,0 +1,34 @@
+{
+    "configurations": [
+        {
+            "name": "Python デバッガー: 引数を含む現在のファイル",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [
+                "${command:pickArgs}"
+            ]
+        },
+        {
+            "name": "chapter10用の Python デバッガー 引数をベタ打ち",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [
+                "--task",
+                "スマートフォン向けの健康管理アプリを開発したい",
+                "--k",
+                "3"
+            ]
+        },
+        {
+            "name": "Python デバッガー: 現在のファイル",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+    ]
+}
