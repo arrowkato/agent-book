@@ -4,27 +4,28 @@ from langchain_openai import ChatOpenAI
 from self_reflection.main import ReflectiveAgent
 
 
-def main():
+def main() -> None:
+    """グラフ構造は、self-reflection のときと同じで、reflectionのモデルをClaudeに変更"""
+
     import argparse
 
     from settings import Settings
 
     settings = Settings()
 
-    parser = argparse.ArgumentParser(
-        description="ReflectiveAgentを使用してタスクを実行します（Cross-reflection）"
-    )
+    parser = argparse.ArgumentParser(description="ReflectiveAgentを使用してタスクを実行します（Cross-reflection）")
     parser.add_argument("--task", type=str, required=True, help="実行するタスク")
     args = parser.parse_args()
 
     # OpenAIのLLMを初期化
-    openai_llm = ChatOpenAI(
-        model=settings.openai_smart_model, temperature=settings.temperature
-    )
+    openai_llm = ChatOpenAI(model=settings.openai_smart_model, temperature=settings.temperature)
 
     # AnthropicのLLMを初期化
     anthropic_llm = ChatAnthropic(
-        model=settings.anthropic_smart_model, temperature=settings.temperature
+        model_name=settings.anthropic_smart_model,
+        temperature=settings.temperature,
+        timeout=60,
+        stop=None,
     )
 
     # ReflectionManagerを初期化
@@ -32,7 +33,8 @@ def main():
 
     # AnthropicのLLMを使用するTaskReflectorを初期化
     anthropic_task_reflector = TaskReflector(
-        llm=anthropic_llm, reflection_manager=reflection_manager
+        llm=anthropic_llm,
+        reflection_manager=reflection_manager,
     )
 
     # ReflectiveAgentを初期化
