@@ -288,7 +288,7 @@ class ReflectiveAgent:
         return final_state.get("final_output", "エラー: 出力に失敗しました。")
 
 
-def main():
+def main() -> None:
     import argparse
 
     from settings import Settings
