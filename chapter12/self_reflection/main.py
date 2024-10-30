@@ -8,6 +8,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
 from passive_goal_creator.main import Goal, PassiveGoalCreator
 from prompt_optimizer.main import OptimizedGoal, PromptOptimizer
@@ -15,11 +16,12 @@ from pydantic import BaseModel, Field
 from response_optimizer.main import ResponseOptimizer
 
 
-def format_reflections(reflections: list[Reflection]) -> str:
+def format_reflections(reflections: list[Reflection] | list[Reflection | None]) -> str:
     return (
         "\n\n".join(
             f"<ref_{i}><task>{r.task}</task><reflection>{r.reflection}</reflection></ref_{i}>"
             for i, r in enumerate(reflections)
+            if r is not None
         )
         if reflections
         else "No relevant past reflections."
@@ -38,17 +40,11 @@ class DecomposedTasks(BaseModel):
 class ReflectiveAgentState(BaseModel):
     query: str = Field(..., description="ユーザーが最初に入力したクエリ")
     optimized_goal: str = Field(default="", description="最適化された目標")
-    optimized_response: str = Field(
-        default="", description="最適化されたレスポンス定義"
-    )
+    optimized_response: str = Field(default="", description="最適化されたレスポンス定義")
     tasks: list[str] = Field(default_factory=list, description="実行するタスクのリスト")
     current_task_index: int = Field(default=0, description="現在実行中のタスクの番号")
-    results: Annotated[list[str], operator.add] = Field(
-        default_factory=list, description="実行済みタスクの結果リスト"
-    )
-    reflection_ids: Annotated[list[str], operator.add] = Field(
-        default_factory=list, description="リフレクション結果のIDリスト"
-    )
+    results: Annotated[list[str], operator.add] = Field(default_factory=list, description="実行済みタスクの結果リスト")
+    reflection_ids: Annotated[list[str], operator.add] = Field(default_factory=list, description="リフレクション結果のIDリスト")
     final_output: str = Field(default="", description="最終的な出力結果")
     retry_count: int = Field(default=0, description="タスクの再試行回数")
 
@@ -86,7 +82,7 @@ class ReflectiveResponseOptimizer:
 
 
 class QueryDecomposer:
-    def __init__(self, llm: ChatOpenAI, reflection_manager: ReflectionManager):
+    def __init__(self, llm: ChatOpenAI, reflection_manager: ReflectionManager) -> None:
         self.llm = llm.with_structured_output(DecomposedTasks)
         self.current_date = datetime.now().strftime("%Y-%m-%d")
         self.reflection_manager = reflection_manager
@@ -109,11 +105,11 @@ class QueryDecomposer:
         )
         chain = prompt | self.llm
         tasks = chain.invoke({"query": query, "reflections": reflection_text})
-        return tasks
+        return tasks  # type: ignore
 
 
 class TaskExecutor:
-    def __init__(self, llm: ChatOpenAI, reflection_manager: ReflectionManager):
+    def __init__(self, llm: ChatOpenAI, reflection_manager: ReflectionManager) -> None:
         self.llm = llm
         self.reflection_manager = reflection_manager
         self.current_date = datetime.now().strftime("%Y-%m-%d")
@@ -145,7 +141,7 @@ class TaskExecutor:
 
 
 class ResultAggregator:
-    def __init__(self, llm: ChatOpenAI, reflection_manager: ReflectionManager):
+    def __init__(self, llm: ChatOpenAI, reflection_manager: ReflectionManager) -> None:
         self.llm = llm
         self.reflection_manager = reflection_manager
         self.current_date = datetime.now().strftime("%Y-%m-%d")
@@ -157,9 +153,7 @@ class ResultAggregator:
         reflection_ids: list[str],
         response_definition: str,
     ) -> str:
-        relevant_reflections = [
-            self.reflection_manager.get_reflection(rid) for rid in reflection_ids
-        ]
+        relevant_reflections = [self.reflection_manager.get_reflection(rid) for rid in reflection_ids]
         prompt = ChatPromptTemplate.from_template(
             "与えられた目標:\n{query}\n\n"
             "調査結果:\n{results}\n\n"
@@ -171,9 +165,7 @@ class ResultAggregator:
         return chain.invoke(
             {
                 "query": query,
-                "results": "\n\n".join(
-                    f"Info {i+1}:\n{result}" for i, result in enumerate(results)
-                ),
+                "results": "\n\n".join(f"Info {i+1}:\n{result}" for i, result in enumerate(results)),
                 "response_definition": response_definition,
                 "reflection_text": format_reflections(relevant_reflections),
             }
@@ -191,24 +183,29 @@ class ReflectiveAgent:
         self.reflection_manager = reflection_manager
         self.task_reflector = task_reflector
         self.reflective_goal_creator = ReflectiveGoalCreator(
-            llm=llm, reflection_manager=self.reflection_manager
+            llm=llm,
+            reflection_manager=self.reflection_manager,
         )
         self.reflective_response_optimizer = ReflectiveResponseOptimizer(
-            llm=llm, reflection_manager=self.reflection_manager
+            llm=llm,
+            reflection_manager=self.reflection_manager,
         )
         self.query_decomposer = QueryDecomposer(
-            llm=llm, reflection_manager=self.reflection_manager
+            llm=llm,
+            reflection_manager=self.reflection_manager,
         )
         self.task_executor = TaskExecutor(
-            llm=llm, reflection_manager=self.reflection_manager
+            llm=llm,
+            reflection_manager=self.reflection_manager,
         )
         self.result_aggregator = ResultAggregator(
-            llm=llm, reflection_manager=self.reflection_manager
+            llm=llm,
+            reflection_manager=self.reflection_manager,
         )
         self.max_retries = max_retries
         self.graph = self._create_graph()
 
-    def _create_graph(self) -> StateGraph:
+    def _create_graph(self) -> CompiledStateGraph:
         graph = StateGraph(ReflectiveAgentState)
         graph.add_node("goal_setting", self._goal_setting)
         graph.add_node("decompose_query", self._decompose_query)
@@ -235,9 +232,7 @@ class ReflectiveAgent:
 
     def _goal_setting(self, state: ReflectiveAgentState) -> dict[str, Any]:
         optimized_goal: str = self.reflective_goal_creator.run(query=state.query)
-        optimized_response: str = self.reflective_response_optimizer.run(
-            query=optimized_goal
-        )
+        optimized_response: str = self.reflective_response_optimizer.run(query=optimized_goal)
         return {
             "optimized_goal": optimized_goal,
             "optimized_response": optimized_response,
@@ -258,9 +253,7 @@ class ReflectiveAgent:
         reflection = self.task_reflector.run(task=current_task, result=current_result)
         return {
             "reflection_ids": [reflection.id],
-            "retry_count": (
-                state.retry_count + 1 if reflection.judgment.needs_retry else 0
-            ),
+            "retry_count": (state.retry_count + 1 if reflection.judgment.needs_retry else 0),
         }
 
     def _should_retry_or_continue(self, state: ReflectiveAgentState) -> str:
@@ -270,7 +263,7 @@ class ReflectiveAgent:
             latest_reflection
             and latest_reflection.judgment.needs_retry
             and state.retry_count < self.max_retries
-        ):
+        ):  # fmt: skip
             return "retry"
         elif state.current_task_index < len(state.tasks) - 1:
             return "continue"
@@ -302,20 +295,14 @@ def main():
 
     settings = Settings()
 
-    parser = argparse.ArgumentParser(
-        description="ReflectiveAgentを使用してタスクを実行します（Self-reflection）"
-    )
+    parser = argparse.ArgumentParser(description="ReflectiveAgentを使用してタスクを実行します（Self-reflection）")
     parser.add_argument("--task", type=str, required=True, help="実行するタスク")
     args = parser.parse_args()
 
-    llm = ChatOpenAI(
-        model=settings.openai_smart_model, temperature=settings.temperature
-    )
+    llm = ChatOpenAI(model=settings.openai_smart_model, temperature=settings.temperature)
     reflection_manager = ReflectionManager(file_path="tmp/self_reflection_db.json")
     task_reflector = TaskReflector(llm=llm, reflection_manager=reflection_manager)
-    agent = ReflectiveAgent(
-        llm=llm, reflection_manager=reflection_manager, task_reflector=task_reflector
-    )
+    agent = ReflectiveAgent(llm=llm, reflection_manager=reflection_manager, task_reflector=task_reflector)
     result = agent.run(args.task)
     print(result)
 
