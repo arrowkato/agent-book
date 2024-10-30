@@ -20,15 +20,15 @@ class Settings(BaseSettings):
     # for Application
     openai_smart_model: str = "gpt-4o"
     openai_embedding_model: str = "text-embedding-3-small"
-    anthropic_smart_model: str = "claude-3-5-sonnet-20240620"
+    anthropic_smart_model: str = "claude-3-5-sonnet-20241022"
     temperature: float = 0.0
     default_reflection_db_path: str = "tmp/reflection_db.json"
 
-    def __init__(self, **values):
+    def __init__(self, **values) -> None:
         super().__init__(**values)
         self._set_env_variables()
 
-    def _set_env_variables(self):
+    def _set_env_variables(self) -> None:
         for key in self.__annotations__.keys():
             if key.isupper():
                 os.environ[key] = getattr(self, key)
