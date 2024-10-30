@@ -8,6 +8,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import ConfigurableField
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
 from passive_goal_creator.main import Goal, PassiveGoalCreator
 from prompt_optimizer.main import OptimizedGoal, PromptOptimizer
@@ -51,13 +52,14 @@ class MultiPathPlanGenerationState(BaseModel):
         default_factory=list, description="各タスクで選択されたオプションのインデックス"
     )
     results: Annotated[list[str], operator.add] = Field(
-        default_factory=list, description="実行されたタスクの結果"
+        default_factory=list,
+        description="実行されたタスクの結果",
     )
     final_output: str = Field(default="", description="最終出力")
 
 
 class QueryDecomposer:
-    def __init__(self, llm: ChatOpenAI):
+    def __init__(self, llm: ChatOpenAI) -> None:
         self.llm = llm
         self.current_date = datetime.now().strftime("%Y-%m-%d")
 
@@ -77,14 +79,12 @@ class QueryDecomposer:
             "目標: {query}"
         )
         chain = prompt | self.llm.with_structured_output(DecomposedTasks)
-        return chain.invoke({"query": query})
+        return chain.invoke({"query": query})  # type: ignore
 
 
 class OptionPresenter:
-    def __init__(self, llm: ChatOpenAI):
-        self.llm = llm.configurable_fields(
-            max_tokens=ConfigurableField(id="max_tokens")
-        )
+    def __init__(self, llm: ChatOpenAI) -> None:
+        self.llm = llm.configurable_fields(max_tokens=ConfigurableField(id="max_tokens"))
 
     def run(self, task: Task) -> int:
         task_name = task.task_name
@@ -103,14 +103,12 @@ class OptionPresenter:
             "選択 (1-{num_options}): "
         )
 
-        options_text = "\n".join(
-            f"{i+1}. {option.description}" for i, option in enumerate(options)
-        )
+        options_text = "\n".join(f"{i+1}. {option.description}" for i, option in enumerate(options))
         chain = (
             choice_prompt
             | self.llm.with_config(configurable=dict(max_tokens=1))
             | StrOutputParser()
-        )
+        )  # fmt: skip
         choice_str = chain.invoke(
             {
                 "task_name": task_name,
@@ -124,7 +122,7 @@ class OptionPresenter:
 
 
 class TaskExecutor:
-    def __init__(self, llm: ChatOpenAI):
+    def __init__(self, llm: ChatOpenAI) -> None:
         self.llm = llm
         self.tools = [TavilySearchResults(max_results=3)]
 
@@ -151,7 +149,7 @@ class TaskExecutor:
 
 
 class ResultAggregator:
-    def __init__(self, llm: ChatOpenAI):
+    def __init__(self, llm: ChatOpenAI) -> None:
         self.llm = llm
 
     def run(
@@ -180,12 +178,12 @@ class ResultAggregator:
 
     @staticmethod
     def _format_task_results(
-        tasks: list[Task], chosen_options: list[int], results: list[str]
+        tasks: list[Task],
+        chosen_options: list[int],
+        results: list[str],
     ) -> str:
         task_results = ""
-        for i, (task, chosen_option, result) in enumerate(
-            zip(tasks, chosen_options, results)
-        ):
+        for i, (task, chosen_option, result) in enumerate(zip(tasks, chosen_options, results)):
             task_name = task.task_name
             chosen_option_desc = task.options[chosen_option].description
             task_results += f"タスク {i+1}: {task_name}\n"
@@ -198,7 +196,7 @@ class MultiPathPlanGeneration:
     def __init__(
         self,
         llm: ChatOpenAI,
-    ):
+    ) -> None:
         self.llm = llm
         self.passive_goal_creator = PassiveGoalCreator(llm=self.llm)
         self.prompt_optimizer = PromptOptimizer(llm=self.llm)
@@ -209,7 +207,7 @@ class MultiPathPlanGeneration:
         self.result_aggregator = ResultAggregator(llm=self.llm)
         self.graph = self._create_graph()
 
-    def _create_graph(self) -> StateGraph:
+    def _create_graph(self) -> CompiledStateGraph:
         graph = StateGraph(MultiPathPlanGenerationState)
         graph.add_node("goal_setting", self._goal_setting)
         graph.add_node("decompose_query", self._decompose_query)
@@ -277,21 +275,20 @@ class MultiPathPlanGeneration:
         return final_state.get("final_output", "最終的な回答の生成に失敗しました。")
 
 
-def main():
+def main() -> None:
     import argparse
 
     from settings import Settings
 
     settings = Settings()
 
-    parser = argparse.ArgumentParser(
-        description="MultiPathPlanGenerationを使用してタスクを実行します"
-    )
+    parser = argparse.ArgumentParser(description="MultiPathPlanGenerationを使用してタスクを実行します")
     parser.add_argument("--task", type=str, required=True, help="実行するタスク")
     args = parser.parse_args()
 
     llm = ChatOpenAI(
-        model=settings.openai_smart_model, temperature=settings.temperature
+        model=settings.openai_smart_model,
+        temperature=settings.temperature,
     )
     agent = MultiPathPlanGeneration(llm=llm)
     result = agent.run(query=args.task)
