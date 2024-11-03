@@ -186,9 +186,18 @@ class InterviewConductor:
         return question_chain.batch(question_queries)
 
     def _generate_answers(self, personas: list[Persona], questions: list[str]) -> list[str]:
+        """各ペルソナが質問に回答します
+
+        Args:
+            personas (list[Persona]): ペルソナ。リストの長さは、最初に引数で入力するkの数と同じです。
+            questions (list[str]): 各ペルソナへの質問リスト
+
+        Returns:
+            list[str]: 回答のリスト
+        """
         # 回答生成のためのプロンプトを定義
         answer_prompt = ChatPromptTemplate.from_messages(
-            [
+            messages=[
                 (
                     "system",
                     "あなたは以下のペルソナとして回答しています: {persona_name} - {persona_background}",
