@@ -1,4 +1,6 @@
+import io
 import operator
+import os
 from typing import Annotated, Any, Optional
 
 from dotenv import load_dotenv
@@ -7,6 +9,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
+from PIL import Image
 from pydantic import BaseModel, Field
 
 # .envファイルから環境変数を読み込む
@@ -45,8 +48,9 @@ class EvaluationResult(BaseModel):
     is_sufficient: bool = Field(..., description="情報が十分かどうか")
 
 
-# 要件定義生成AIエージェントのステート
 class InterviewState(BaseModel):
+    """要件定義生成AIエージェントのステート"""
+
     user_request: str = Field(..., description="ユーザーからのリクエスト")
     personas: Annotated[list[Persona], operator.add] = Field(
         default_factory=list,
@@ -293,6 +297,17 @@ class DocumentationAgent:
 
         # グラフの作成
         self.graph = self._create_graph()
+        self.draw_graph()
+
+    def draw_graph(self) -> None:
+        """グラフ構造を.pngファイルとして出力します。"""
+
+        byte_stream = io.BytesIO(self.graph.get_graph().draw_mermaid_png())
+        image = Image.open(byte_stream)
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        image.save(f"{current_dir}/{self.__class__.__name__}.png")
+
+        print(f"graph structure image: {current_dir}/{self.__class__.__name__}.png")
 
     def _create_graph(self) -> CompiledStateGraph:
         # グラフの初期化
