@@ -68,8 +68,9 @@ class InterviewState(BaseModel):
     )
 
 
-# ペルソナを生成するクラス
 class PersonaGenerator:
+    """ペルソナを生成するクラス"""
+
     def __init__(self, llm: ChatOpenAI, k: int = 5) -> None:
         self.llm = llm.with_structured_output(Personas)
         self.k = k
@@ -77,16 +78,19 @@ class PersonaGenerator:
     def run(self, user_request: str) -> Personas:
         # プロンプトテンプレートを定義
         prompt = ChatPromptTemplate.from_messages(
-            [
+            messages=[
                 (
                     "system",
                     "あなたはユーザーインタビュー用の多様なペルソナを作成する専門家です。",
                 ),
                 (
                     "human",
-                    f"以下のユーザーリクエストに関するインタビュー用に、{self.k}人の多様なペルソナを生成してください。\n\n"
-                    "ユーザーリクエスト: {user_request}\n\n"
-                    "各ペルソナには名前と簡単な背景を含めてください。年齢、性別、職業、技術的専門知識において多様性を確保してください。",
+                    f"""\
+以下のユーザーリクエストに関するインタビュー用に、{self.k}人の多様なペルソナを生成してください。
+
+ユーザーリクエスト: {user_request}
+
+各ペルソナには名前と簡単な背景を含めてください。年齢、性別、職業、技術的専門知識において多様性を確保してください。""",
                 ),
             ]
         )
@@ -320,19 +324,20 @@ class DocumentationAgent:
         workflow.add_node("generate_requirements", self._generate_requirements)
 
         # エントリーポイントの設定
-        workflow.set_entry_point("generate_personas")
+        workflow.set_entry_point(key="generate_personas")
 
         # ノード間のエッジの追加
-        workflow.add_edge("generate_personas", "conduct_interviews")
-        workflow.add_edge("conduct_interviews", "evaluate_information")
+        workflow.add_edge(start_key="generate_personas", end_key="conduct_interviews")
+        workflow.add_edge(start_key="conduct_interviews", end_key="evaluate_information")
 
         # 条件付きエッジの追加
         workflow.add_conditional_edges(
-            "evaluate_information",
-            lambda state: not state.is_information_sufficient and state.iteration < 5,
-            {True: "generate_personas", False: "generate_requirements"},
+            source="evaluate_information",
+            path=lambda state: not state.is_information_sufficient and state.iteration < 5,
+            path_map={True: "generate_personas", False: "generate_requirements"},
         )
-        workflow.add_edge("generate_requirements", END)
+        # ノード間のエッジの追加
+        workflow.add_edge(start_key="generate_requirements", end_key=END)
 
         # グラフのコンパイル
         return workflow.compile()
