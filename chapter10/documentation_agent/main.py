@@ -100,8 +100,9 @@ class PersonaGenerator:
         return chain.invoke({"user_request": user_request})  # type: ignore
 
 
-# インタビューを実施するクラス
 class InterviewConductor:
+    """ペルソナに対して、インタビューを実施するクラス"""
+
     def __init__(self, llm: ChatOpenAI) -> None:
         self.llm = llm
 
@@ -130,19 +131,39 @@ class InterviewConductor:
         user_request: str,
         personas: list[Persona],
     ) -> list[str]:
+        """各ペルソナへの質問を生成します
+
+        Args:
+            user_request (str): taskで入力した内容。e.g., 'スマートフォン向けの健康管理アプリを開発したい'
+            personas (list[Persona]): generate_personasで生成したペルソナのリスト
+                persona
+                    - persona.name: e.g., '山田美咲'
+                    - persona_background: e.g., '28歳女性、看護師。忙しい仕事の合間に健康管理を行いたいと考えているが、時間がない。技術にはあまり詳しくないが、使いやすいアプリを求めている。'
+
+        Returns:
+            list[str]: 各ペルソナへの質問リスト
+                e.g.,
+                - '鈴木太郎さんが健康管理アプリを使用する際に、特にどのような機能やサポートがあれば、使いやすさや効果を感じられると思いますか？',
+                - '山田美咲さんが忙しい仕事の合間に健康管理を行うために、特にどのような機能（例：食事記録、運動トラッキング、ストレス管理など）が最も役立つと感じますか？',
+                - '鈴木太郎さんが健康管理アプリを使用する際に、特にどのような機能やサポートがあれば、使いやすさや効果を感じられると思いますか？',
+        """
         # 質問生成のためのプロンプトを定義
         question_prompt = ChatPromptTemplate.from_messages(
-            [
+            messages=[
                 (
                     "system",
                     "あなたはユーザー要件に基づいて適切な質問を生成する専門家です。",
                 ),
                 (
                     "human",
-                    "以下のペルソナに関連するユーザーリクエストについて、1つの質問を生成してください。\n\n"
-                    "ユーザーリクエスト: {user_request}\n"
-                    "ペルソナ: {persona_name} - {persona_background}\n\n"
-                    "質問は具体的で、このペルソナの視点から重要な情報を引き出すように設計してください。",
+                    """\
+以下のペルソナに関連するユーザーリクエストについて、1つの質問を生成してください。
+
+ユーザーリクエスト: {user_request}
+
+ペルソナ: {persona_name} - {persona_background}
+
+質問は具体的で、このペルソナの視点から重要な情報を引き出すように設計してください。""",
                 ),
             ]
         )
@@ -152,8 +173,11 @@ class InterviewConductor:
         # 各ペルソナに対する質問クエリを作成
         question_queries = [
             {
+                # task で入力した内容
                 "user_request": user_request,
+                # e.g., '山田美咲'
                 "persona_name": persona.name,
+                # e.g., '28歳女性、看護師。忙しい仕事の合間に健康管理を行いたいと考えているが、時間がない。技術にはあまり詳しくないが、使いやすいアプリを求めている。'
                 "persona_background": persona.background,
             }
             for persona in personas
