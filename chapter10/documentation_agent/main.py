@@ -220,8 +220,22 @@ class InterviewConductor:
         # 回答をバッチ処理で生成
         return answer_chain.batch(answer_queries)
 
-    def _create_interviews(self, personas: list[Persona], questions: list[str], answers: list[str]) -> list[Interview]:
-        # ペルソナ毎に質問と回答の組み合わせからインタビューオブジェクトを作成
+    def _create_interviews(
+        self,
+        personas: list[Persona],
+        questions: list[str],
+        answers: list[str],
+    ) -> list[Interview]:
+        """ペルソナ毎に質問と回答の組み合わせからインタビューオブジェクトを作成
+
+        Args:
+            personas (list[Persona]): ペルソナ
+            questions (list[str]): ペルソナへの質問
+            answers (list[str]): ペルソナからの回答
+
+        Returns:
+            list[Interview]: インタビューオブジェクトのリスト
+        """
         return [
             Interview(persona=persona, question=question, answer=answer)
             for persona, question, answer in zip(
