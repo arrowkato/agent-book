@@ -24,6 +24,18 @@
             ]
         },
         {
+            "name": "chapter12用の Python デバッガー 引数をベタ打ち",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "cwd": "${workspaceFolder}/chapter12",
+            "console": "integratedTerminal",
+            "args": [
+                "--task",
+                "カレーライスの作り方",
+            ]
+        },
+        {
             "name": "Python デバッガー: 現在のファイル",
             "type": "debugpy",
             "request": "launch",
