@@ -32,11 +32,32 @@ https://www.amazon.co.jp/dp/4297145308
 
 Python パッケージの動作確認済みバージョンは、各章のディレクトリの requirements.txt を参照してください。
 
+## 既知のエラー
+
+### 「7.4 Ragas による合成テストデータの生成」における RateLimitError
+
+「7.4 Ragas による合成テストデータの生成」において、gpt-4o を使用すると OpenAI API の Usage tier 次第で RateLimitError が発生することが報告されています。
+
+OpenAI API の Usage tier については公式ドキュメントの以下のページを参照してください。
+
+https://platform.openai.com/docs/guides/rate-limits/usage-tiers
+
+このエラーが発生した場合は、以下のどちらかの対応を実施してください。
+
+1. 同じ Tier でも gpt-4o よりレートリミットの高い gpt-4o-mini を使用する
+   - この場合、生成される合成テストデータの品質は低くなることが想定されます
+2. 課金などにより Tier を上げる
+   - Tier 2 で RateLimitError が発生しないことを確認済みです (2024 年 10 月 31 日時点)
+
 ## 書籍の誤り・エラーについて
 
 書籍の誤り（誤字など）や、発生したエラーについては、GitHub の Issue からご連絡ください。
 
 https://github.com/GenerativeAgents/agent-book/issues
+
+## 正誤表
+
+[正誤表](./errata.md)
 
 ## リンク
 
