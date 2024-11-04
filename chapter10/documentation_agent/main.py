@@ -275,11 +275,9 @@ class InformationEvaluator:
                     "human",
                     """\
 以下のユーザーリクエストとインタビュー結果に基づいて、包括的な要件文書を作成するのに十分な情報が集まったかどうかを判断してください。
-
 ユーザーリクエスト: {user_request}
-
-インタビュー結果:\n{interview_results}",
-                    """,
+インタビュー結果:
+{interview_results}""",
                 ),
             ]
         )
@@ -402,6 +400,7 @@ class DocumentationAgent:
         # 条件付きエッジの追加
         workflow.add_conditional_edges(
             source="evaluate_information",
+            # 情報が不十分かつ判断回数が5回未満なら、ペルソナ生成へ戻る。そうでないなら、要件定義書生成へ進む
             path=lambda state: not state.is_information_sufficient and state.iteration < 5,
             path_map={True: "generate_personas", False: "generate_requirements"},
         )
