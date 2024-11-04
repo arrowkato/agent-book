@@ -246,25 +246,40 @@ class InterviewConductor:
         ]
 
 
-# 情報の十分性を評価するクラス
 class InformationEvaluator:
-    def __init__(self, llm: ChatOpenAI) -> None:
-        self.llm = llm.with_structured_output(EvaluationResult)
+    """情報が十分集まったかどうかを評価するクラス"""
 
-    # ユーザーリクエストとインタビュー結果を基に情報の十分性を評価
+    def __init__(self, llm: ChatOpenAI) -> None:
+        # 評価結果は、EvaluationResult の形で格納
+        self.llm = llm.with_structured_output(schema=EvaluationResult)
+
     def run(self, user_request: str, interviews: list[Interview]) -> EvaluationResult:
+        """情報が十分集まったかどうかを評価します。
+
+        Args:
+            user_request (str): ユーザからの要望. 実質"--task"で入力した文字列 e.g., "作成したいアプリケーションについて記載してください"
+            interviews (list[Interview]): インタビューの結果
+
+        Returns:
+            EvaluationResult: 情報が十分集まったかどうか. is_sufficient: bool があるのでそこに格納
+        """
+
         # プロンプトを定義
         prompt = ChatPromptTemplate.from_messages(
-            [
+            messages=[
                 (
                     "system",
                     "あなたは包括的な要件文書を作成するための情報の十分性を評価する専門家です。",
                 ),
                 (
                     "human",
-                    "以下のユーザーリクエストとインタビュー結果に基づいて、包括的な要件文書を作成するのに十分な情報が集まったかどうかを判断してください。\n\n"
-                    "ユーザーリクエスト: {user_request}\n\n"
-                    "インタビュー結果:\n{interview_results}",
+                    """\
+以下のユーザーリクエストとインタビュー結果に基づいて、包括的な要件文書を作成するのに十分な情報が集まったかどうかを判断してください。
+
+ユーザーリクエスト: {user_request}
+
+インタビュー結果:\n{interview_results}",
+                    """,
                 ),
             ]
         )
@@ -272,7 +287,7 @@ class InformationEvaluator:
         chain = prompt | self.llm
         # 評価結果を返す
         return chain.invoke(
-            {
+            input={
                 "user_request": user_request,
                 "interview_results": "\n".join(
                     f"""\
@@ -294,25 +309,32 @@ class RequirementsDocumentGenerator:
     def run(self, user_request: str, interviews: list[Interview]) -> str:
         # プロンプトを定義
         prompt = ChatPromptTemplate.from_messages(
-            [
+            messages=[
                 (
                     "system",
                     "あなたは収集した情報に基づいて要件文書を作成する専門家です。",
                 ),
                 (
                     "human",
-                    "以下のユーザーリクエストと複数のペルソナからのインタビュー結果に基づいて、要件文書を作成してください。\n\n"
-                    "ユーザーリクエスト: {user_request}\n\n"
-                    "インタビュー結果:\n{interview_results}\n"
-                    "要件文書には以下のセクションを含めてください:\n"
-                    "1. プロジェクト概要\n"
-                    "2. 主要機能\n"
-                    "3. 非機能要件\n"
-                    "4. 制約条件\n"
-                    "5. ターゲットユーザー\n"
-                    "6. 優先順位\n"
-                    "7. リスクと軽減策\n\n"
-                    "出力は必ず日本語でお願いします。\n\n要件文書:",
+                    """
+以下のユーザーリクエストと複数のペルソナからのインタビュー結果に基づいて、要件文書を作成してください。
+
+ユーザーリクエスト: {user_request}
+インタビュー結果:
+{interview_results}
+
+要件文書には以下のセクションを含めてください:
+1. プロジェクト概要
+2. 主要機能
+3. 非機能要件
+4. 制約条件
+5. ターゲットユーザー
+6. 優先順位
+7. リスクと軽減策
+
+出力は必ず日本語でお願いします。
+
+要件文書:""",
                 ),
             ]
         )
